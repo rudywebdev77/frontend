@@ -6,8 +6,8 @@ import tailwindcss from '@tailwindcss/vite';
 export default defineConfig({
   plugins: [react(), tailwindcss()],
   server: {
+    host: 'localhost',
     port: 5173,
-    host: true, // Listen on all local IP addresses (0.0.0.0) so mobile devices on Wi-Fi can connect
     proxy: {
       '/api': {
         target: 'http://localhost:5000',
