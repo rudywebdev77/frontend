@@ -22,10 +22,13 @@ export const validatePdfFile = (file, maxSizeBytes = 10 * 1024 * 1024) => {
     return { valid: false, error: 'Please select a file.' };
   }
 
-  const fileName = file.name.toLowerCase();
-  const isPdfExtension = fileName.endsWith('.pdf');
-  const isPdfMime = file.type === 'application/pdf';
+  const fileName = (file.name || '').toLowerCase();
+  const fileType = (file.type || '').toLowerCase();
 
+  const isPdfExtension = fileName.endsWith('.pdf');
+  const isPdfMime = fileType.includes('pdf') || fileType === 'application/pdf';
+
+  // Mobile file pickers might leave file.type empty or provide application/octet-stream
   if (!isPdfExtension && !isPdfMime) {
     return { valid: false, error: 'Invalid file format. Only PDF (.pdf) files are allowed.' };
   }

@@ -57,14 +57,22 @@ export const Home = () => {
   const handleDownload = () => {
     if (!convertedData || !convertedData.blob) return;
 
-    const url = window.URL.createObjectURL(convertedData.blob);
+    const blob = new Blob([convertedData.blob], {
+      type: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+    });
+    const url = window.URL.createObjectURL(blob);
     const link = document.createElement('a');
     link.href = url;
-    link.setAttribute('download', convertedData.filename);
+    link.setAttribute('download', convertedData.filename || 'converted.docx');
+    link.target = '_self';
     document.body.appendChild(link);
     link.click();
-    link.remove();
-    window.URL.revokeObjectURL(url);
+    document.body.removeChild(link);
+
+    // Delay revocation to give mobile browsers time to initiate download
+    setTimeout(() => {
+      window.URL.revokeObjectURL(url);
+    }, 3000);
   };
 
   return (

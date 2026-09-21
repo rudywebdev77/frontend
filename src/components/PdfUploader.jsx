@@ -39,7 +39,6 @@ export const PdfUploader = ({ onFileSelect }) => {
       onDragOver={handleDragOver}
       onDragLeave={handleDragLeave}
       onDrop={handleDrop}
-      onClick={() => fileInputRef.current?.click()}
       className={`relative group cursor-pointer border-2 border-dashed rounded-3xl p-8 sm:p-12 text-center transition-all duration-300 shadow-sm ${
         isDragging
           ? 'border-indigo-600 bg-indigo-50/80 scale-[1.01]'
@@ -50,12 +49,13 @@ export const PdfUploader = ({ onFileSelect }) => {
         type="file"
         ref={fileInputRef}
         onChange={handleFileInputChange}
-        accept=".pdf,application/pdf"
-        className="hidden"
+        accept="application/pdf,.pdf"
+        className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10"
         id="pdf-file-input"
+        title="Choose PDF file"
       />
 
-      <div className="flex flex-col items-center justify-center space-y-4">
+      <div className="flex flex-col items-center justify-center space-y-4 pointer-events-none">
         <div className={`w-20 h-20 rounded-2xl flex items-center justify-center transition-all duration-300 ${
           isDragging ? 'bg-indigo-600 text-white scale-110' : 'bg-indigo-50 text-indigo-600 group-hover:bg-indigo-600 group-hover:text-white group-hover:scale-105'
         }`}>
@@ -67,7 +67,7 @@ export const PdfUploader = ({ onFileSelect }) => {
             Upload your PDF
           </h3>
           <p className="text-sm text-slate-600 max-w-sm mx-auto">
-            Drag & drop your PDF file here, or click to browse from your computer.
+            Tap here or drag & drop your PDF file to convert it into Word.
           </p>
         </div>
 
