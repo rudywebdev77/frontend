@@ -1,5 +1,5 @@
 import React from 'react';
-import { Loader2, FileText, FileCheck } from 'lucide-react';
+import { Loader2, FileText, ScanText, FileCheck } from 'lucide-react';
 
 export const ConversionStatus = ({ fileName }) => {
   return (
@@ -22,22 +22,26 @@ export const ConversionStatus = ({ fileName }) => {
 
       <div className="max-w-md mx-auto space-y-3 pt-2">
         <div className="flex items-center justify-between text-xs font-semibold text-slate-500 px-1">
-          <span>Processing Document</span>
+          <span>Analyzing PDF & Extracting Text</span>
           <span className="text-indigo-600">Please wait...</span>
         </div>
         <div className="w-full h-2 bg-slate-100 rounded-full overflow-hidden border border-slate-200">
-          <div className="h-full bg-gradient-to-r from-indigo-500 to-violet-500 rounded-full animate-pulse w-3/4"></div>
+          <div className="h-full bg-gradient-to-r from-indigo-500 via-violet-500 to-purple-500 rounded-full animate-pulse w-3/4"></div>
         </div>
       </div>
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 max-w-md mx-auto pt-4 text-xs text-slate-600">
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 max-w-lg mx-auto pt-4 text-xs text-slate-600">
         <div className="flex items-center gap-2 p-3 rounded-xl bg-slate-50 border border-slate-200">
           <FileText className="w-4 h-4 text-indigo-600 shrink-0" />
-          <span>Extracting Text Content</span>
+          <span>Detecting Type</span>
         </div>
         <div className="flex items-center gap-2 p-3 rounded-xl bg-slate-50 border border-slate-200">
-          <FileCheck className="w-4 h-4 text-violet-600 shrink-0" />
-          <span>Building DOCX Layout</span>
+          <ScanText className="w-4 h-4 text-violet-600 shrink-0" />
+          <span>Text / OCR Processing</span>
+        </div>
+        <div className="flex items-center gap-2 p-3 rounded-xl bg-slate-50 border border-slate-200">
+          <FileCheck className="w-4 h-4 text-purple-600 shrink-0" />
+          <span>Generating DOCX</span>
         </div>
       </div>
     </div>

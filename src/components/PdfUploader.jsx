@@ -1,5 +1,5 @@
 import React, { useRef, useState } from 'react';
-import { UploadCloud, FileUp, ShieldCheck } from 'lucide-react';
+import { UploadCloud, FileUp, ShieldCheck, ScanText } from 'lucide-react';
 
 export const PdfUploader = ({ onFileSelect }) => {
   const [isDragging, setIsDragging] = useState(false);
@@ -63,11 +63,14 @@ export const PdfUploader = ({ onFileSelect }) => {
         </div>
 
         <div>
+          <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-violet-50 border border-violet-200 text-violet-700 text-xs font-semibold mb-2">
+            <ScanText className="w-3.5 h-3.5" /> Normal & Scanned PDFs Auto-Supported
+          </div>
           <h3 className="text-xl font-bold text-slate-900 mb-1">
             Upload your PDF
           </h3>
           <p className="text-sm text-slate-600 max-w-sm mx-auto">
-            Tap here or drag & drop your PDF file to convert it into Word.
+            Tap here or drag & drop your PDF file to convert it into editable Word.
           </p>
         </div>
 
