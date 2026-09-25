@@ -7,15 +7,22 @@ import { convertPdfToWordClientSide } from './clientPdfService';
  * automatically falls back to in-browser conversion.
  *
  * @param {File} file - PDF file to convert.
+ * @param {'exact'|'editable'} [mode='exact'] - Conversion mode ('exact' for 1:1 same-to-same, 'editable' for flow text).
  * @param {Function} [onUploadProgress] - Callback for progress updates.
  * @returns {Promise<{ blob: Blob, filename: string }>}
  */
-export const convertPdfToWordApi = async (file, onUploadProgress) => {
+export const convertPdfToWordApi = async (file, mode = 'exact', onUploadProgress) => {
+  if (typeof mode === 'function') {
+    onUploadProgress = mode;
+    mode = 'exact';
+  }
+
   const formData = new FormData();
   formData.append('pdf', file);
+  formData.append('mode', mode);
 
   try {
-    const response = await api.post('/api/pdf-to-word', formData, {
+    const response = await api.post(`/api/pdf-to-word?mode=${mode}`, formData, {
       headers: {
         'Content-Type': 'multipart/form-data',
       },
@@ -62,7 +69,7 @@ export const convertPdfToWordApi = async (file, onUploadProgress) => {
 
     if (isNetworkOr404Error) {
       console.warn('Backend service unavailable on current host. Falling back to client-side in-browser PDF conversion.');
-      return await convertPdfToWordClientSide(file, onUploadProgress);
+      return await convertPdfToWordClientSide(file, mode, onUploadProgress);
     }
 
     const message = error.response?.data?.message || error.message || 'Failed to convert PDF. Please try again.';

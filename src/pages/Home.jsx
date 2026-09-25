@@ -14,6 +14,7 @@ export const Home = () => {
   // State machine: 'idle' | 'selected' | 'converting' | 'success' | 'error'
   const [status, setStatus] = useState('idle');
   const [selectedFile, setSelectedFile] = useState(null);
+  const [mode, setMode] = useState('exact'); // Default to 1:1 exact replica ("Same to Same")
   const [convertedData, setConvertedData] = useState(null); // { blob, filename }
   const [errorMsg, setErrorMsg] = useState('');
 
@@ -44,7 +45,7 @@ export const Home = () => {
     setErrorMsg('');
 
     try {
-      const result = await convertPdfToWordApi(selectedFile);
+      const result = await convertPdfToWordApi(selectedFile, mode);
       setConvertedData(result);
       setStatus('success');
     } catch (err) {

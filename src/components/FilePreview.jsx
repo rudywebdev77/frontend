@@ -7,6 +7,7 @@ export const FilePreview = ({ file, onRemove, onConvert }) => {
 
   return (
     <div className="glass-card rounded-2xl p-6 sm:p-8 space-y-6">
+      {/* File Info */}
       <div className="flex items-center justify-between p-4 rounded-xl bg-slate-50 border border-slate-200">
         <div className="flex items-center space-x-4 min-w-0">
           <div className="w-12 h-12 rounded-xl bg-red-50 border border-red-200 text-red-600 flex items-center justify-center shrink-0">
@@ -32,13 +33,14 @@ export const FilePreview = ({ file, onRemove, onConvert }) => {
         </button>
       </div>
 
+      {/* Action Buttons */}
       <div className="flex flex-col sm:flex-row items-center gap-3">
         <button
           onClick={onConvert}
           className="w-full py-3.5 px-6 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-base shadow-md shadow-indigo-600/20 flex items-center justify-center gap-2 transition-all duration-200"
           type="button"
         >
-          Convert to Word
+          Convert PDF to Word
           <ArrowRight className="w-5 h-5" />
         </button>
         <button

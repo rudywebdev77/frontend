@@ -1,6 +1,6 @@
 import * as pdfjsLib from 'pdfjs-dist';
 import { createWorker } from 'tesseract.js';
-import { Document, Paragraph, TextRun, Packer } from 'docx';
+import { Document, Paragraph, TextRun, ImageRun, Packer, AlignmentType } from 'docx';
 
 // Set up worker source dynamically from CDN matching pdfjs version for Vercel/browser compatibility
 pdfjsLib.GlobalWorkerOptions.workerSrc = `https://cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjsLib.version || '3.11.174'}/pdf.worker.min.js`;
@@ -8,14 +8,96 @@ pdfjsLib.GlobalWorkerOptions.workerSrc = `https://cdnjs.cloudflare.com/ajax/libs
 const MAX_CLIENT_OCR_PAGES = 20;
 
 /**
+ * Client-side 1:1 exact visual replica converter.
+ */
+export const convertPdfToWordClientSideExact = async (file, onProgress) => {
+  const arrayBuffer = await file.arrayBuffer();
+  const loadingTask = pdfjsLib.getDocument({ data: arrayBuffer });
+  const pdfDoc = await loadingTask.promise;
+  const numPages = pdfDoc.numPages;
+
+  const sections = [];
+
+  for (let pageNum = 1; pageNum <= numPages; pageNum++) {
+    const page = await pdfDoc.getPage(pageNum);
+    const baseViewport = page.getViewport({ scale: 1.0 });
+    const widthPt = baseViewport.width;
+    const heightPt = baseViewport.height;
+
+    const renderScale = 2.0;
+    const renderViewport = page.getViewport({ scale: renderScale });
+
+    const canvas = document.createElement('canvas');
+    const context = canvas.getContext('2d');
+    canvas.width = Math.floor(renderViewport.width);
+    canvas.height = Math.floor(renderViewport.height);
+
+    await page.render({ canvasContext: context, viewport: renderViewport }).promise;
+
+    const imageBlob = await new Promise((resolve) => canvas.toBlob(resolve, 'image/png'));
+    const imageBuffer = new Uint8Array(await imageBlob.arrayBuffer());
+
+    sections.push({
+      properties: {
+        page: {
+          size: {
+            width: Math.round(widthPt * 20),
+            height: Math.round(heightPt * 20),
+          },
+          margin: { top: 0, bottom: 0, left: 0, right: 0 },
+        },
+      },
+      children: [
+        new Paragraph({
+          alignment: AlignmentType.CENTER,
+          children: [
+            new ImageRun({
+              data: imageBuffer,
+              transformation: {
+                width: Math.round(widthPt * (96 / 72)),
+                height: Math.round(heightPt * (96 / 72)),
+              },
+            }),
+          ],
+          spacing: { before: 0, after: 0 },
+        }),
+      ],
+    });
+
+    if (typeof onProgress === 'function') {
+      onProgress({ loaded: Math.round((pageNum / numPages) * 100), total: 100 });
+    }
+  }
+
+  const doc = new Document({ sections });
+  const docxBlob = await Packer.toBlob(doc);
+  const baseName = file.name.replace(/\.pdf$/i, '');
+
+  return {
+    blob: docxBlob,
+    filename: `${baseName || 'converted'}.docx`,
+  };
+};
+
+/**
  * Converts a PDF file directly in the browser using pdfjs-dist and docx.
  * If text extraction yields no readable text, automatically performs client-side OCR using tesseract.js.
  *
  * @param {File} file - PDF file to convert.
+ * @param {'exact'|'editable'} [mode='exact'] - Conversion mode.
  * @param {Function} [onProgress] - Optional progress callback.
  * @returns {Promise<{ blob: Blob, filename: string }>}
  */
-export const convertPdfToWordClientSide = async (file, onProgress) => {
+export const convertPdfToWordClientSide = async (file, mode = 'exact', onProgress) => {
+  if (typeof mode === 'function') {
+    onProgress = mode;
+    mode = 'exact';
+  }
+
+  if (mode === 'exact') {
+    return await convertPdfToWordClientSideExact(file, onProgress);
+  }
+
   try {
     const arrayBuffer = await file.arrayBuffer();
     
