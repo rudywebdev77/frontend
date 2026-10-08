@@ -7,6 +7,68 @@ pdfjsLib.GlobalWorkerOptions.workerSrc = `https://cdnjs.cloudflare.com/ajax/libs
 
 const MAX_CLIENT_OCR_PAGES = 20;
 
+function parseClientTextItems(textContent, viewport) {
+  const items = [];
+  for (const item of textContent.items) {
+    if (!item.str || item.str.length === 0) continue;
+
+    const transform = item.transform || [1, 0, 0, 1, 0, 0];
+    const scaleX = Math.abs(transform[0]);
+    const scaleY = Math.abs(transform[3]);
+    const fontSizePt = Math.max(8, Math.round(scaleY || scaleX || 11));
+
+    const xPt = transform[4];
+    const pdfY = transform[5];
+    const yPt = viewport.height - pdfY;
+
+    const fontName = (item.fontName || '').toLowerCase();
+    const isBold = fontName.includes('bold') || fontName.includes('heavy') || fontName.includes('bd');
+    const isItalic = fontName.includes('italic') || fontName.includes('oblique') || fontName.includes('it');
+
+    items.push({
+      str: item.str,
+      xPt,
+      yPt,
+      widthPt: item.width || 0,
+      fontSizePt,
+      fontFamily: 'Calibri',
+      isBold,
+      isItalic,
+      color: '1F2937',
+    });
+  }
+  return items;
+}
+
+function clusterClientTextItems(items) {
+  if (items.length === 0) return [];
+  items.sort((a, b) => a.yPt - b.yPt);
+
+  const clusters = [];
+  for (const item of items) {
+    let matched = null;
+    for (const cluster of clusters) {
+      if (Math.abs(item.yPt - cluster.avgY) <= Math.max(6, item.fontSizePt * 0.65)) {
+        matched = cluster;
+        break;
+      }
+    }
+
+    if (matched) {
+      matched.items.push(item);
+      matched.avgY = matched.items.reduce((sum, it) => sum + it.yPt, 0) / matched.items.length;
+    } else {
+      clusters.push({ avgY: item.yPt, items: [item] });
+    }
+  }
+
+  clusters.sort((a, b) => a.avgY - b.avgY);
+  for (const cluster of clusters) {
+    cluster.items.sort((a, b) => a.xPt - b.xPt);
+  }
+  return clusters;
+}
+
 /**
  * Client-side 1:1 exact visual replica converter.
  */
@@ -84,14 +146,14 @@ export const convertPdfToWordClientSideExact = async (file, onProgress) => {
  * If text extraction yields no readable text, automatically performs client-side OCR using tesseract.js.
  *
  * @param {File} file - PDF file to convert.
- * @param {'exact'|'editable'} [mode='exact'] - Conversion mode.
+ * @param {'exact'|'editable'} [mode='editable'] - Conversion mode.
  * @param {Function} [onProgress] - Optional progress callback.
  * @returns {Promise<{ blob: Blob, filename: string }>}
  */
-export const convertPdfToWordClientSide = async (file, mode = 'exact', onProgress) => {
+export const convertPdfToWordClientSide = async (file, mode = 'editable', onProgress) => {
   if (typeof mode === 'function') {
     onProgress = mode;
-    mode = 'exact';
+    mode = 'editable';
   }
 
   if (mode === 'exact') {
@@ -115,37 +177,82 @@ export const convertPdfToWordClientSide = async (file, mode = 'exact', onProgres
     // Step 1: Standard text extraction attempt
     for (let pageNum = 1; pageNum <= numPages; pageNum++) {
       const page = await pdfDoc.getPage(pageNum);
+      const viewport = page.getViewport({ scale: 1.0 });
       const textContent = await page.getTextContent();
+      const pageMidX = viewport.width / 2;
       
-      const lineMap = new Map();
+      const textItems = parseClientTextItems(textContent, viewport);
+      const lineClusters = clusterClientTextItems(textItems);
 
-      for (const item of textContent.items) {
-        if (!item.str || item.str.trim().length === 0) continue;
-        const yPos = Math.round(item.transform[5] / 4) * 4;
-        if (!lineMap.has(yPos)) {
-          lineMap.set(yPos, []);
+      for (const cluster of lineClusters) {
+        const lineRuns = [];
+        let currentRun = null;
+
+        for (const item of cluster.items) {
+          totalText += item.str + ' ';
+          if (!currentRun) {
+            currentRun = { ...item };
+          } else {
+            const prevRightX = currentRun.xPt + currentRun.widthPt;
+            const gap = item.xPt - prevRightX;
+            if (item.fontSizePt === currentRun.fontSizePt && item.isBold === currentRun.isBold && item.isItalic === currentRun.isItalic) {
+              if (gap > 2) {
+                currentRun.str += ' ' + item.str;
+              } else {
+                currentRun.str += item.str;
+              }
+              currentRun.widthPt = Math.max(currentRun.widthPt, item.xPt + item.widthPt - currentRun.xPt);
+            } else {
+              lineRuns.push(currentRun);
+              currentRun = { ...item };
+            }
+          }
         }
-        lineMap.get(yPos).push(item.str);
-      }
+        if (currentRun) lineRuns.push(currentRun);
 
-      const sortedYPositions = Array.from(lineMap.keys()).sort((a, b) => b - a);
+        if (lineRuns.length > 0) {
+          const minX = Math.min(...cluster.items.map((it) => it.xPt));
+          const maxX = Math.max(...cluster.items.map((it) => it.xPt + (it.widthPt || 0)));
+          const lineWidth = maxX - minX;
+          const lineMidX = (minX + maxX) / 2;
 
-      for (const yPos of sortedYPositions) {
-        const lineText = lineMap.get(yPos).join(' ').trim();
-        if (lineText.length > 0) {
-          totalText += lineText + ' ';
+          let alignment = AlignmentType.LEFT;
+          if (Math.abs(lineMidX - pageMidX) < 45 && lineWidth < viewport.width * 0.75) {
+            alignment = AlignmentType.CENTER;
+          }
+
+          const docxRuns = [];
+          for (let i = 0; i < lineRuns.length; i++) {
+            const run = lineRuns[i];
+            if (i > 0) {
+              const prevRun = lineRuns[i - 1];
+              const gap = run.xPt - (prevRun.xPt + prevRun.widthPt);
+              if (gap > 35) {
+                docxRuns.push(new TextRun({ text: '\t\t\t\t' }));
+              } else {
+                docxRuns.push(new TextRun({ text: ' ' }));
+              }
+            }
+            docxRuns.push(
+              new TextRun({
+                text: run.str,
+                font: 'Calibri',
+                size: Math.min(96, Math.max(16, run.fontSizePt * 2)),
+                bold: run.isBold,
+                italic: run.isItalic,
+                color: '1F2937',
+              })
+            );
+          }
+
+          const isTitle = lineRuns[0].fontSizePt >= 18;
           docxParagraphs.push(
             new Paragraph({
-              children: [
-                new TextRun({
-                  text: lineText,
-                  font: 'Calibri',
-                  size: 24,
-                  color: '1F2937',
-                }),
-              ],
+              children: docxRuns,
+              alignment,
               spacing: {
-                after: 140,
+                before: isTitle ? 180 : 40,
+                after: isTitle ? 120 : 60,
                 line: 276,
               },
             })

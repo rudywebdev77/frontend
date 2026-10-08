@@ -34,10 +34,10 @@ export const FilePreview = ({ file, onRemove, onConvert }) => {
       </div>
 
       {/* Action Buttons */}
-      <div className="flex flex-col sm:flex-row items-center gap-3">
+      <div className="flex flex-col sm:flex-row items-center gap-3 pt-2">
         <button
           onClick={onConvert}
-          className="w-full py-3.5 px-6 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-base shadow-md shadow-indigo-600/20 flex items-center justify-center gap-2 transition-all duration-200"
+          className="w-full py-3.5 px-6 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-base shadow-md shadow-indigo-600/20 flex items-center justify-center gap-2 transition-all duration-200 cursor-pointer"
           type="button"
         >
           Convert PDF to Word
@@ -45,7 +45,7 @@ export const FilePreview = ({ file, onRemove, onConvert }) => {
         </button>
         <button
           onClick={onRemove}
-          className="w-full sm:w-auto py-3.5 px-6 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold text-sm transition-colors border border-slate-200"
+          className="w-full sm:w-auto py-3.5 px-6 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold text-sm transition-colors border border-slate-200 cursor-pointer"
           type="button"
         >
           Choose Different File

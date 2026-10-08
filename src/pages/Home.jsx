@@ -14,7 +14,7 @@ export const Home = () => {
   // State machine: 'idle' | 'selected' | 'converting' | 'success' | 'error'
   const [status, setStatus] = useState('idle');
   const [selectedFile, setSelectedFile] = useState(null);
-  const [mode, setMode] = useState('exact'); // Default to 1:1 exact replica ("Same to Same")
+  const [mode, setMode] = useState('editable'); // Default to Editable Text mode
   const [convertedData, setConvertedData] = useState(null); // { blob, filename }
   const [errorMsg, setErrorMsg] = useState('');
 

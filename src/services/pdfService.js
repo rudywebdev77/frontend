@@ -7,14 +7,14 @@ import { convertPdfToWordClientSide } from './clientPdfService';
  * automatically falls back to in-browser conversion.
  *
  * @param {File} file - PDF file to convert.
- * @param {'exact'|'editable'} [mode='exact'] - Conversion mode ('exact' for 1:1 same-to-same, 'editable' for flow text).
+ * @param {'exact'|'editable'} [mode='editable'] - Conversion mode ('exact' for 1:1 same-to-same, 'editable' for flow text).
  * @param {Function} [onUploadProgress] - Callback for progress updates.
  * @returns {Promise<{ blob: Blob, filename: string }>}
  */
-export const convertPdfToWordApi = async (file, mode = 'exact', onUploadProgress) => {
+export const convertPdfToWordApi = async (file, mode = 'editable', onUploadProgress) => {
   if (typeof mode === 'function') {
     onUploadProgress = mode;
-    mode = 'exact';
+    mode = 'editable';
   }
 
   const formData = new FormData();
