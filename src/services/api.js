@@ -28,7 +28,7 @@ const getApiBaseUrl = () => {
 
 const api = axios.create({
   baseURL: getApiBaseUrl(),
-  timeout: 120000, // 2 minute timeout for larger conversions
+  timeout: 180000, // 3 minute timeout for larger conversions
 });
 
 export default api;

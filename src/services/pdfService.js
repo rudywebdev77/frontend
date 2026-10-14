@@ -1,31 +1,12 @@
 import api from './api';
-import { convertPdfToWordClientSide } from './clientPdfService';
 
-/**
- * Converts PDF file to Word (.docx) document.
- * Tries the backend API endpoint first; if unavailable (404/Network Error on static hosts like Vercel),
- * automatically falls back to in-browser conversion.
- *
- * @param {File} file - PDF file to convert.
- * @param {'exact'|'editable'} [mode='editable'] - Conversion mode ('exact' for 1:1 same-to-same, 'editable' for flow text).
- * @param {Function} [onUploadProgress] - Callback for progress updates.
- * @returns {Promise<{ blob: Blob, filename: string }>}
- */
-export const convertPdfToWordApi = async (file, mode = 'editable', onUploadProgress) => {
-  if (typeof mode === 'function') {
-    onUploadProgress = mode;
-    mode = 'editable';
-  }
-
+export const convertPdfToWordApi = async (file, onUploadProgress) => {
   const formData = new FormData();
   formData.append('pdf', file);
-  formData.append('mode', mode);
 
   try {
-    const response = await api.post(`/api/pdf-to-word?mode=${mode}`, formData, {
-      headers: {
-        'Content-Type': 'multipart/form-data',
-      },
+    const response = await api.post('/api/pdf-to-word', formData, {
+      headers: { 'Content-Type': 'multipart/form-data' },
       responseType: 'blob',
       onUploadProgress,
     });
@@ -34,53 +15,30 @@ export const convertPdfToWordApi = async (file, mode = 'editable', onUploadProgr
     const disposition = response.headers['content-disposition'];
     if (disposition && disposition.includes('filename=')) {
       const match = disposition.match(/filename="?([^"]+)"?/);
-      if (match && match[1]) {
-        filename = match[1];
-      }
+      if (match && match[1]) filename = match[1];
     }
 
-    return {
-      blob: response.data,
-      filename,
-    };
+    return { blob: response.data, filename };
   } catch (error) {
-    // If backend returns a structured JSON error inside Blob response (e.g., 400 Bad Request, scanned PDF)
-    if (error.response && error.response.status !== 404 && error.response.data instanceof Blob) {
+    // Backend errors come back as JSON inside a Blob
+    if (error.response && error.response.data instanceof Blob) {
       try {
-        const errorText = await error.response.data.text();
-        const json = JSON.parse(errorText);
-        if (json && json.message) {
-          throw new Error(json.message);
-        }
+        const json = JSON.parse(await error.response.data.text());
+        if (json && json.message) throw new Error(json.message);
       } catch (parseError) {
-        if (parseError.message && parseError.message !== 'Unexpected token') {
+        if (parseError instanceof Error && parseError.name !== 'SyntaxError') {
           throw parseError;
         }
       }
     }
 
-    const isNetworkOr404Error =
-      !error.response ||
-      error.response.status === 404 ||
-      error.response.status === 502 ||
-      error.response.status === 503 ||
-      error.message === 'Network Error' ||
-      error.message.includes('404');
-
-    if (isNetworkOr404Error) {
-      console.warn('Backend service unavailable on current host. Falling back to client-side in-browser PDF conversion.');
-      return await convertPdfToWordClientSide(file, mode, onUploadProgress);
+    if (!error.response) {
+      throw new Error('Cannot reach the server. Please check your connection and try again.');
     }
-
-    const message = error.response?.data?.message || error.message || 'Failed to convert PDF. Please try again.';
-    throw new Error(message);
+    throw new Error('Conversion failed. Please try again.');
   }
 };
 
-/**
- * Health check endpoint test.
- * @returns {Promise<boolean>}
- */
 export const checkApiHealth = async () => {
   try {
     const response = await api.get('/api/health');

@@ -14,7 +14,7 @@ export const Home = () => {
   // State machine: 'idle' | 'selected' | 'converting' | 'success' | 'error'
   const [status, setStatus] = useState('idle');
   const [selectedFile, setSelectedFile] = useState(null);
-  const [mode, setMode] = useState('editable'); // Default to Editable Text mode
+
   const [convertedData, setConvertedData] = useState(null); // { blob, filename }
   const [errorMsg, setErrorMsg] = useState('');
 
@@ -45,7 +45,7 @@ export const Home = () => {
     setErrorMsg('');
 
     try {
-      const result = await convertPdfToWordApi(selectedFile, mode);
+      const result = await convertPdfToWordApi(selectedFile);
       setConvertedData(result);
       setStatus('success');
     } catch (err) {
